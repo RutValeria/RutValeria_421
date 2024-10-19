@@ -1,77 +1,158 @@
 package com.example.calculate;
 
 import android.os.Bundle;
-
-import com.google.android.material.snackbar.Snackbar;
-
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.view.View;
-
-import androidx.navigation.NavController;
-import androidx.navigation.Navigation;
-import androidx.navigation.ui.AppBarConfiguration;
-import androidx.navigation.ui.NavigationUI;
-
-import com.example.calculate.databinding.ActivityMainBinding;
-
-import android.view.Menu;
-import android.view.MenuItem;
+import android.widget.Button;
+import android.widget.TextView;
+import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
 
-    private AppBarConfiguration appBarConfiguration;
-    private ActivityMainBinding binding;
+    private TextView display;
+    private String currentInput = "";
+    private String operator = "";
+    private double firstNumber = 0;
+    private boolean isOperatorPressed = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
 
-        binding = ActivityMainBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+        display = findViewById(R.id.display);
 
-        setSupportActionBar(binding.toolbar);
+        // Нахождение всех кнопок по id и установка обработчика нажатий
+        setNumberButtonListeners();
+        setOperatorButtonListeners();
+        setUtilityButtonListeners();
+    }
 
-        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
-        appBarConfiguration = new AppBarConfiguration.Builder(navController.getGraph()).build();
-        NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
+    private void setNumberButtonListeners() {
+        int[] numberButtonIds = {
+                R.id.button_0, R.id.button_1, R.id.button_2,
+                R.id.button_3, R.id.button_4, R.id.button_5,
+                R.id.button_6, R.id.button_7, R.id.button_8,
+                R.id.button_9
+        };
 
-        binding.fab.setOnClickListener(new View.OnClickListener() {
+        View.OnClickListener listener = new View.OnClickListener() {
             @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAnchorView(R.id.fab)
-                        .setAction("Action", null).show();
+            public void onClick(View v) {
+                Button button = (Button) v;
+                if (isOperatorPressed) {
+                    currentInput = "";  // Начинаем вводить новое число
+                    isOperatorPressed = false;
+                }
+                currentInput += button.getText().toString();
+                display.setText(currentInput);
+            }
+        };
+
+        for (int id : numberButtonIds) {
+            findViewById(id).setOnClickListener(listener);
+        }
+    }
+
+    private void setOperatorButtonListeners() {
+        int[] operatorButtonIds = {
+                R.id.button_add, R.id.button_subtract,
+                R.id.button_multiply, R.id.button_divide
+        };
+
+        View.OnClickListener listener = new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Button button = (Button) v;
+                operator = button.getText().toString();
+                firstNumber = Double.parseDouble(currentInput);
+                isOperatorPressed = true;
+            }
+        };
+
+        for (int id : operatorButtonIds) {
+            findViewById(id).setOnClickListener(listener);
+        }
+    }
+
+    private void setUtilityButtonListeners() {
+        // Кнопка "="
+        findViewById(R.id.button_equals).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                double secondNumber = Double.parseDouble(currentInput);
+                double result = 0;
+
+                switch (operator) {
+                    case "+":
+                        result = firstNumber + secondNumber;
+                        break;
+                    case "-":
+                        result = firstNumber - secondNumber;
+                        break;
+                    case "×":
+                        result = firstNumber * secondNumber;
+                        break;
+                    case "÷":
+                        if (secondNumber != 0) {
+                            result = firstNumber / secondNumber;
+                        } else {
+                            display.setText("Error");
+                            return;
+                        }
+                        break;
+                }
+                currentInput = String.valueOf(result);
+                display.setText(currentInput);
             }
         });
-    }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
+        // Кнопка "C" (очистка)
+        findViewById(R.id.button_clear).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                currentInput = "";
+                operator = "";
+                firstNumber = 0;
+                isOperatorPressed = false;
+                display.setText("0");
+            }
+        });
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
+        // Кнопка "+/-" (смена знака)
+        findViewById(R.id.button_negate).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (!currentInput.isEmpty()) {
+                    double value = Double.parseDouble(currentInput);
+                    value = -value;
+                    currentInput = String.valueOf(value);
+                    display.setText(currentInput);
+                }
+            }
+        });
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
+        // Кнопка "%" (проценты)
+        findViewById(R.id.button_percent).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (!currentInput.isEmpty()) {
+                    double value = Double.parseDouble(currentInput);
+                    value = value / 100;
+                    currentInput = String.valueOf(value);
+                    display.setText(currentInput);
+                }
+            }
+        });
 
-        return super.onOptionsItemSelected(item);
-    }
-
-    @Override
-    public boolean onSupportNavigateUp() {
-        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
-        return NavigationUI.navigateUp(navController, appBarConfiguration)
-                || super.onSupportNavigateUp();
+        // Кнопка "," (десятичная точка)
+        findViewById(R.id.button_comma).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (!currentInput.contains(".")) {
+                    currentInput += ".";
+                    display.setText(currentInput);
+                }
+            }
+        });
     }
 }
